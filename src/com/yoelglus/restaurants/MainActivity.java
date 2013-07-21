@@ -4,7 +4,6 @@ import java.util.List;
 
 import android.app.ActionBar;
 import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.location.Location;
@@ -14,7 +13,6 @@ import android.support.v4.app.FragmentTransaction;
 import android.support.v4.app.LoaderManager.LoaderCallbacks;
 import android.support.v4.content.Loader;
 import android.util.DisplayMetrics;
-import android.view.Display;
 import android.view.Menu;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -25,7 +23,6 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 public class MainActivity extends FragmentActivity implements ActionBar.TabListener, 
@@ -196,10 +193,7 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 	}
 
 	@Override
-	public void onDisconnected() {
-		// TODO Auto-generated method stub
-		
-	}
+	public void onDisconnected() {}
 
 	@Override
 	public Loader<List<Restaurant>> onCreateLoader(int id, Bundle args) {
