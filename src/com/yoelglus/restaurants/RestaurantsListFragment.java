@@ -3,6 +3,9 @@ package com.yoelglus.restaurants;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.yoelglus.restaurants.R.id;
+import com.yoelglus.restaurants.R.layout;
+
 import android.content.Context;
 import android.os.Bundle;
 import android.support.v4.app.ListFragment;
@@ -11,9 +14,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.TextView;
-
-import com.yoelglus.restaurantes.R.id;
-import com.yoelglus.restaurantes.R.layout;
 
 public class RestaurantsListFragment extends ListFragment {
 	

@@ -4,24 +4,29 @@ import java.util.List;
 
 import android.app.ActionBar;
 import android.app.Activity;
-import android.app.FragmentTransaction;
+import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.location.Location;
 import android.os.Bundle;
-import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentPagerAdapter;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v4.app.LoaderManager.LoaderCallbacks;
 import android.support.v4.content.Loader;
-import android.support.v4.view.ViewPager;
+import android.util.DisplayMetrics;
+import android.view.Display;
 import android.view.Menu;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient;
 import com.google.android.gms.location.LocationClient;
-import com.yoelglus.restaurantes.R;
+import com.google.android.gms.maps.CameraUpdate;
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.MarkerOptions;
 
 public class MainActivity extends FragmentActivity implements ActionBar.TabListener, 
 																GooglePlayServicesClient.ConnectionCallbacks,
@@ -33,49 +38,33 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 	private LocationClient mLocationClient;
 	
 	private RestaurantsListFragment mListFragment;
+	private SupportMapFragment mMapFragment;
 	
-	// The pager adapter that will return each screen fragment.
-	private ScreensPagerAdapter mScreensPagerAdapter;
+	private static final int LIST_SCREEN_POSITION = 0;
+	private static final int MAP_SCREEN_POSITION = 1;
+	
+	private int mSelectedTab = 0;
 
-	// Will host the two screens.
-    private ViewPager mViewPager;
+	private Location mLocation;
+
+	private List<Restaurant> mRestaurantsList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
 
         // Set up the action bar.
         final ActionBar actionBar = getActionBar();
         actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_TABS);
 
-        // Create the adapter that will return a fragment for each of the two screens
-        // of the app: list and map.
-        mScreensPagerAdapter = new ScreensPagerAdapter(getSupportFragmentManager());
-
-        // Set up the ViewPager with the screens adapter.
-        mViewPager = (ViewPager) findViewById(R.id.pager);
-        mViewPager.setAdapter(mScreensPagerAdapter);
-
-        // When swiping between different screens, select the corresponding screen
-        mViewPager.setOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener() {
-            @Override
-            public void onPageSelected(int position) {
-                actionBar.setSelectedNavigationItem(position);
-            }
-        });
-
-        // For each of the screens in the app, add a tab to the action bar.
-        for (int i = 0; i < mScreensPagerAdapter.getCount(); i++) {
-            // Create a tab with text corresponding to the screen title defined by
-            // the adapter. Also specify this Activity object, which implements
-            // the TabListener interface, as the callback (listener) for when
-            // this tab is selected.
-            actionBar.addTab(
-                    actionBar.newTab()
-                            .setText(mScreensPagerAdapter.getPageTitle(i))
-                            .setTabListener(this));
-        }
+        actionBar.addTab(
+                actionBar.newTab()
+                        .setText(getString(R.string.title_list_screen))
+                        .setTabListener(this));
+        actionBar.addTab(
+                actionBar.newTab()
+                        .setText(getString(R.string.title_map_screen))
+                        .setTabListener(this));
         
         // create the location client to get the device location
         mLocationClient = new LocationClient(this, this, this);
@@ -89,63 +78,56 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
     }
     
     @Override
-    public void onTabSelected(ActionBar.Tab tab, FragmentTransaction fragmentTransaction) {
-        // When the given tab is selected, switch to the corresponding screen in
-        // the ViewPager.
-        mViewPager.setCurrentItem(tab.getPosition());
-    }
-
-    @Override
-    public void onTabUnselected(ActionBar.Tab tab, FragmentTransaction fragmentTransaction) {
-    }
-
-    @Override
-    public void onTabReselected(ActionBar.Tab tab, FragmentTransaction fragmentTransaction) {
-    }
-
-    /**
-     * A {@link FragmentPagerAdapter} that returns a fragment corresponding to
-     * one of the screens.
-     */
-    public class ScreensPagerAdapter extends FragmentPagerAdapter {
-    	
-    	private static final int LIST_SCREEN_POSITION = 0;
-    	private static final int MAP_SCREEN_POSITION = 1;
-    	
-    	private static final int SCREENS_COUNT = 2;
-    	
-        public ScreensPagerAdapter(FragmentManager fm) {
-            super(fm);
-        }
-
-        @Override
-        public Fragment getItem(int position) {
-        	switch (position) {
-			case LIST_SCREEN_POSITION:
-	        	mListFragment = new RestaurantsListFragment();
-	        	return mListFragment;
-			case MAP_SCREEN_POSITION:
-				return new RestaurantsListFragment();
-			default:
-				return null;
+    public void onTabSelected(ActionBar.Tab tab, android.app.FragmentTransaction fragmentTransaction) {
+    	FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+    	mSelectedTab = tab.getPosition();
+    	switch (mSelectedTab) {
+		case LIST_SCREEN_POSITION:
+			if (mListFragment == null) {
+				mListFragment = new RestaurantsListFragment();
+				transaction.add(android.R.id.content, mListFragment, "ListFragment");
 			}
-        }
+			else {
+				transaction.attach(mListFragment);
+			}
+			break;
+		case MAP_SCREEN_POSITION:
+			if (mMapFragment == null) {
+				mMapFragment = SupportMapFragment.newInstance();
+				transaction.add(android.R.id.content, mMapFragment, "MapFragment");
+				transaction.commit();
+				getSupportFragmentManager().executePendingTransactions();
+				setMapData();
+				return;
+			}
+			else {
+				transaction.attach(mMapFragment);
+			}
+			break;
+    	}
+    	transaction.commit();
+    }
 
-        @Override
-        public int getCount() {
-            return SCREENS_COUNT;
-        }
+	@Override
+    public void onTabUnselected(ActionBar.Tab tab, android.app.FragmentTransaction fragmentTransaction) {
+		FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+    	switch (tab.getPosition()) {
+		case LIST_SCREEN_POSITION:
+			if (mListFragment != null) {
+				transaction.detach(mListFragment);
+			}
+			break;
+		case MAP_SCREEN_POSITION:
+			if (mMapFragment != null) {
+				transaction.detach(mMapFragment);
+			}
+			break;
+    	}
+    	transaction.commit();
+    }
 
-        @Override
-        public CharSequence getPageTitle(int position) {
-            switch (position) {
-                case LIST_SCREEN_POSITION:
-                    return getString(R.string.title_list_screen);
-                case MAP_SCREEN_POSITION:
-                    return getString(R.string.title_map_screen);
-            }
-            return null;
-        }
+    @Override
+    public void onTabReselected(ActionBar.Tab tab, android.app.FragmentTransaction fragmentTransaction) {
     }
     
     @Override
@@ -205,10 +187,10 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 	public void onConnected(Bundle connectionHint) {
 		// get the current location and initialize the loader
 		Bundle args = new Bundle();
-		Location location = mLocationClient.getLastLocation();
-		if (location != null) {
-			args.putDouble("Lat", location.getLatitude());
-			args.putDouble("Lng", location.getLongitude());
+		mLocation = mLocationClient.getLastLocation();
+		if (mLocation != null) {
+			args.putDouble("Lat", mLocation.getLatitude());
+			args.putDouble("Lng", mLocation.getLongitude());
 		}
 		getSupportLoaderManager().initLoader(0, args, this);
 	}
@@ -229,16 +211,50 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 	@Override
 	public void onLoadFinished(Loader<List<Restaurant>> loader,
 			List<Restaurant> data) {
+		mRestaurantsList = data;
 		if (mListFragment != null) {
-			mListFragment.setRestaurantsList(data);
+			mListFragment.setRestaurantsList(mRestaurantsList);
+		}
+		
+		if (mMapFragment != null) {
+			setMapData();
 		}
 		
 	}
 
+	private void setMapData() {
+		if (mRestaurantsList != null) {
+			GoogleMap map = mMapFragment.getMap();
+			for (Restaurant restaurant : mRestaurantsList) {
+				map.addMarker(
+						new MarkerOptions()
+							.position(new LatLng(restaurant.getLatitude(), restaurant.getLongitude()))
+							.title(restaurant.getName()).snippet(restaurant.getVicinity()));
+			}
+			
+			CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(
+					new LatLng(mLocation.getLatitude(), mLocation.getLongitude()), calculateZoomLevel());
+			map.animateCamera(cameraUpdate);
+		}
+	}
+
 	@Override
 	public void onLoaderReset(Loader<List<Restaurant>> arg0) {
-		// TODO Auto-generated method stub
 		
+	}
+	
+	private int calculateZoomLevel() {
+		DisplayMetrics dispalayMetrics = new DisplayMetrics();
+		getWindowManager().getDefaultDisplay().getMetrics(dispalayMetrics);
+	    double equatorLength = 6378140; // in meters
+	    double widthInPixels = dispalayMetrics.widthPixels;
+	    double metersPerPixel = equatorLength / 256;
+	    int zoomLevel = 1;
+	    while ((metersPerPixel * widthInPixels) > 3200) {
+	        metersPerPixel /= 2;
+	        ++zoomLevel;
+	    }
+	    return zoomLevel;
 	}
 	
 

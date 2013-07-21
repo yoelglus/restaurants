@@ -6,7 +6,7 @@ public class Restaurant {
 	private double mLatitude;
 	private double mLongitude;
 	
-	public Restaurant(String name, String vicinity, long latitude, long longitude) {
+	public Restaurant(String name, String vicinity, double latitude, double longitude) {
 		mName = name;
 		mVicinity = vicinity;
 		mLatitude = latitude;

@@ -39,7 +39,6 @@ public class RestaurantsLoader extends AsyncTaskLoader<List<Restaurant>> {
 	@Override
 	public List<Restaurant> loadInBackground() {
 		
-		// Get current location
 		// Retrieve the data from the places API
 		List<Restaurant> resturantsList = getListFromPlaces(mLatitude,mLongitude);
 		
@@ -94,16 +93,16 @@ public class RestaurantsLoader extends AsyncTaskLoader<List<Restaurant>> {
 				if (result != null) {
 					String name = result.optString("name");
 					String vicinity = result.optString("vicinity");
-					long latitude = 0;
-					long longitude = 0;
+					double latitude = 0;
+					double longitude = 0;
 					
 					// parse the location
 					JSONObject geometry = result.optJSONObject("geometry");
 					if (geometry != null) {
 						JSONObject location = geometry.optJSONObject("location");
 						if (location != null) {
-							latitude = location.optLong("lat", 0);
-							longitude = location.optLong("lng", 0);
+							latitude = location.optDouble("lat", 0);
+							longitude = location.optDouble("lng", 0);
 						}
 					}
 					// add the restaurant to the list.
