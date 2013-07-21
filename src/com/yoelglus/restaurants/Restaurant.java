@@ -3,8 +3,8 @@ package com.yoelglus.restaurants;
 public class Restaurant {
 	private String mName;
 	private String mVicinity;
-	private long mLatitude;
-	private long mLongitude;
+	private double mLatitude;
+	private double mLongitude;
 	
 	public Restaurant(String name, String vicinity, long latitude, long longitude) {
 		mName = name;
@@ -21,11 +21,11 @@ public class Restaurant {
 		return mVicinity;
 	}
 
-	public long getLatitude() {
+	public double getLatitude() {
 		return mLatitude;
 	}
 
-	public long getLongitude() {
+	public double getLongitude() {
 		return mLongitude;
 	}
 	

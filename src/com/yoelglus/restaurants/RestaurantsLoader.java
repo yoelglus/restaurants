@@ -3,6 +3,7 @@ package com.yoelglus.restaurants;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
@@ -17,10 +18,15 @@ import org.json.JSONObject;
 import android.content.Context;
 import android.support.v4.content.AsyncTaskLoader;
 
-public class RestaurantsLoader extends AsyncTaskLoader<List<Restaurant>>{
+public class RestaurantsLoader extends AsyncTaskLoader<List<Restaurant>> {
 	
-	public RestaurantsLoader(Context context) {
+	private double mLatitude;
+	private double mLongitude;
+	
+	public RestaurantsLoader(Context context, double lat, double lng) {
 		super(context);
+		mLatitude = lat;
+		mLongitude = lng;
 	}
 
 	// The google places API key.
@@ -28,13 +34,14 @@ public class RestaurantsLoader extends AsyncTaskLoader<List<Restaurant>>{
 	
 	// The search radius in meters (one mile).
 	private static final int SEARCH_RADIUS_METERS = 1609;
+	
 
 	@Override
 	public List<Restaurant> loadInBackground() {
 		
 		// Get current location
 		// Retrieve the data from the places API
-		List<Restaurant> resturantsList = getListFromPlaces(-33.8670522,151.1957362);
+		List<Restaurant> resturantsList = getListFromPlaces(mLatitude,mLongitude);
 		
 		// if succeeded, save the data to the shared preferences.
 		// if failed, try to get the latest data from the share preferences.
@@ -42,10 +49,20 @@ public class RestaurantsLoader extends AsyncTaskLoader<List<Restaurant>>{
 		return resturantsList;
 	}
 
-	private List<Restaurant> getListFromPlaces(double d, double e) {
+	private List<Restaurant> getListFromPlaces(double curLocationLat, double curLocationLng) {
+		
 		// get the list from the places API
 		HttpClient httpClient = new DefaultHttpClient();
-		HttpGet httpGet = new HttpGet("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=-33.8670522,151.1957362&radius=500&types=food&sensor=false&key=AIzaSyCnEBO1GoJH_7znZUHBS11JPqAW1H-y_40");
+		
+		String url = String.format(
+				Locale.getDefault(),
+				"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=%f,%f&radius=%d&types=food&sensor=false&key=%s", 
+				curLocationLat, 
+				curLocationLng, 
+				SEARCH_RADIUS_METERS, 
+				PLACES_API_KEY);
+		
+		HttpGet httpGet = new HttpGet(url);
 		// httpGet.addHeader("Content-type","application/json");
 		ResponseHandler<String> responseHandler = new BasicResponseHandler();
 		String response = null;
