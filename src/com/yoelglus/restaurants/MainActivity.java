@@ -114,7 +114,6 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 
         @Override
         public CharSequence getPageTitle(int position) {
-            Locale l = Locale.getDefault();
             switch (position) {
                 case LIST_SCREEN_POSITION:
                     return getString(R.string.title_list_screen);

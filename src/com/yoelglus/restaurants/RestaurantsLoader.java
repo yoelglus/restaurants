@@ -1,7 +1,18 @@
 package com.yoelglus.restaurants;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.ResponseHandler;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.BasicResponseHandler;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import android.content.Context;
 import android.support.v4.content.AsyncTaskLoader;
@@ -21,20 +32,71 @@ public class RestaurantsLoader extends AsyncTaskLoader<List<Restaurant>>{
 	@Override
 	public List<Restaurant> loadInBackground() {
 		
-		// get current location
-		// retreive the data from the 
+		// Get current location
+		// Retrieve the data from the places API
+		List<Restaurant> resturantsList = getListFromPlaces(-33.8670522,151.1957362);
 		
-		List<Restaurant> dummyRestaurants = new ArrayList<Restaurant>();
-		for (int i = 0; i < 10; i++) {
-			dummyRestaurants.add(new Restaurant("Restaurant " + i, "vicinity " + i));
-		}
+		// if succeeded, save the data to the shared preferences.
+		// if failed, try to get the latest data from the share preferences.
+
+		return resturantsList;
+	}
+
+	private List<Restaurant> getListFromPlaces(double d, double e) {
+		// get the list from the places API
+		HttpClient httpClient = new DefaultHttpClient();
+		HttpGet httpGet = new HttpGet("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=-33.8670522,151.1957362&radius=500&types=food&sensor=false&key=AIzaSyCnEBO1GoJH_7znZUHBS11JPqAW1H-y_40");
+		// httpGet.addHeader("Content-type","application/json");
+		ResponseHandler<String> responseHandler = new BasicResponseHandler();
+		String response = null;
 		try {
-			Thread.sleep(2000);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			 response = httpClient.execute(httpGet, responseHandler);
+		} catch (ClientProtocolException e1) {
+			return null;
+		} catch (IOException e1) {
+			return null;
 		}
-		return dummyRestaurants;
+		
+		// Create a JSONObject from the body of the response
+		JSONObject responseJson = null;
+		try {
+			responseJson = new JSONObject(response);
+		} catch (JSONException e1) {
+			return null;
+		}
+		
+		// Validate the result
+		if ("OK".equals(responseJson.optString("status"))) {
+			// Parse the list
+			List<Restaurant> restaurants = new ArrayList<Restaurant>();
+			JSONArray results = responseJson.optJSONArray("results");
+			int resultsLen = results.length();
+			JSONObject result = null;
+			for (int i = 0; i < resultsLen; i++) {
+				result = results.optJSONObject(i);
+				if (result != null) {
+					String name = result.optString("name");
+					String vicinity = result.optString("vicinity");
+					long latitude = 0;
+					long longitude = 0;
+					
+					// parse the location
+					JSONObject geometry = result.optJSONObject("geometry");
+					if (geometry != null) {
+						JSONObject location = geometry.optJSONObject("location");
+						if (location != null) {
+							latitude = location.optLong("lat", 0);
+							longitude = location.optLong("lng", 0);
+						}
+					}
+					// add the restaurant to the list.
+					restaurants.add(new Restaurant(name, vicinity, latitude, longitude));
+				}
+			}
+			return restaurants;
+		}
+		
+		return null;
 	}
 
 }
