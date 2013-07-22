@@ -18,6 +18,9 @@ import org.json.JSONObject;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.PackageManager.NameNotFoundException;
 import android.support.v4.content.AsyncTaskLoader;
 
 public class RestaurantsLoader extends AsyncTaskLoader<List<Restaurant>> {
@@ -25,14 +28,21 @@ public class RestaurantsLoader extends AsyncTaskLoader<List<Restaurant>> {
 	private double mLatitude;
 	private double mLongitude;
 
+	private String mApiKey;
+	
 	public RestaurantsLoader(Context context, double lat, double lng) {
 		super(context);
 		mLatitude = lat;
 		mLongitude = lng;
+		// extract the API key from the app's meta data.
+		ApplicationInfo appInfo;
+		try {
+			appInfo = context.getPackageManager().getApplicationInfo(context.getPackageName(), PackageManager.GET_META_DATA);
+			mApiKey = appInfo.metaData.getString("com.yoelglus.restaurants.places.API_KEY");
+		} catch (NameNotFoundException e) {
+			// do nothing.
+		}
 	}
-
-	// The google places API key.
-	private static final String PLACES_API_KEY = "AIzaSyCnEBO1GoJH_7znZUHBS11JPqAW1H-y_40";
 
 	// The search radius in meters (one mile).
 	private static final int SEARCH_RADIUS_METERS = 1609;
@@ -49,8 +59,10 @@ public class RestaurantsLoader extends AsyncTaskLoader<List<Restaurant>> {
 		String url = String
 				.format(Locale.getDefault(),
 						"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=%f,%f&radius=%d&types=bus_station&sensor=false&key=%s",
-						mLatitude, mLongitude, SEARCH_RADIUS_METERS,
-						PLACES_API_KEY);
+						mLatitude, 
+						mLongitude, 
+						SEARCH_RADIUS_METERS,
+						mApiKey);
 
 		HttpGet httpGet = new HttpGet(url);
 		ResponseHandler<String> responseHandler = new BasicResponseHandler();

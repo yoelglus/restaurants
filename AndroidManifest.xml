@@ -30,9 +30,15 @@
             </intent-filter>
         </activity>
 
+        <!-- The google maps API key -->
         <meta-data
             android:name="com.google.android.maps.v2.API_KEY"
             android:value="AIzaSyBGoOA47NDwDmJzaX4yNOIg0q68zR7mnHU" />
+        
+        <!-- The google places API key -->
+        <meta-data 
+            android:name="com.yoelglus.restaurants.places.API_KEY"
+            android:value="AIzaSyCnEBO1GoJH_7znZUHBS11JPqAW1H-y_40"/>
     </application>
 
 </manifest>
