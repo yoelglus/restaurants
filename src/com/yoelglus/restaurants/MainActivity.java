@@ -20,6 +20,8 @@ import android.view.MenuItem;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient;
 import com.google.android.gms.location.LocationClient;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -31,7 +33,8 @@ import com.yoelglus.restaurants.R.id;
 public class MainActivity extends FragmentActivity implements ActionBar.TabListener, 
 																GooglePlayServicesClient.ConnectionCallbacks,
 																GooglePlayServicesClient.OnConnectionFailedListener,
-																LoaderCallbacks<List<Restaurant>> {
+																LoaderCallbacks<List<Restaurant>>, 
+																LocationListener {
 	
 	private final static int CONNECTION_FAILURE_RESOLUTION_REQUEST = 9000;
 	
@@ -48,6 +51,9 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 	private Location mLocation;
 
 	private List<Restaurant> mRestaurantsList;
+	
+    // A request to connect to Location Services
+    private LocationRequest mLocationRequest;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,6 +63,20 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
         final ActionBar actionBar = getActionBar();
         actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_TABS);
 
+        // Create a new global location parameters object
+        mLocationRequest = LocationRequest.create();
+        
+        /*
+         * Set the update interval
+         */
+        mLocationRequest.setInterval(5000);
+
+        // Use high accuracy
+        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+
+        // Set the interval ceiling to one second
+        mLocationRequest.setFastestInterval(1000);
+        
         actionBar.addTab(
                 actionBar.newTab()
                         .setText(getString(R.string.title_list_screen))
@@ -151,10 +171,30 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
     	mLocationClient.connect();
     }
     
+    /**
+     * In response to a request to start updates, send a request
+     * to Location Services
+     */
+    private void startPeriodicUpdates() {
+        mLocationClient.requestLocationUpdates(mLocationRequest, this);
+    }
+    
     @Override
     protected void onStop() {
+        // If the client is connected
+        if (mLocationClient.isConnected()) {
+            stopPeriodicUpdates();
+        }
     	mLocationClient.disconnect();
     	super.onStop();
+    }
+    
+    /**
+     * In response to a request to stop updates, send a request to
+     * Location Services
+     */
+    private void stopPeriodicUpdates() {
+        mLocationClient.removeLocationUpdates(this);
     }
 
 	@Override
@@ -185,6 +225,9 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 
 	@Override
 	public void onConnected(Bundle connectionHint) {
+		
+		startPeriodicUpdates();
+		
 		// get the current location and initialize the loader
 		Bundle args = new Bundle();
 		mLocation = mLocationClient.getLastLocation();
@@ -222,6 +265,8 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 	private void setMapData() {
 		if (mRestaurantsList != null) {
 			GoogleMap map = mMapFragment.getMap();
+			// first clear all current markers
+			map.clear();
 			for (Restaurant restaurant : mRestaurantsList) {
 				map.addMarker(
 						new MarkerOptions()
@@ -272,6 +317,11 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 	@Override
 	public void onConfigurationChanged(Configuration newConfig) {
 	  super.onConfigurationChanged(newConfig);
+	}
+
+	@Override
+	public void onLocationChanged(Location location) {
+		// do nothing.
 	}
 
 }

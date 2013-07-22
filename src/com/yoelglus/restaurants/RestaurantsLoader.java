@@ -58,7 +58,7 @@ public class RestaurantsLoader extends AsyncTaskLoader<List<Restaurant>> {
 
 		String url = String
 				.format(Locale.getDefault(),
-						"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=%f,%f&radius=%d&types=bus_station&sensor=false&key=%s",
+						"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=%f,%f&radius=%d&types=restaurant&sensor=false&key=%s",
 						mLatitude, 
 						mLongitude, 
 						SEARCH_RADIUS_METERS,
