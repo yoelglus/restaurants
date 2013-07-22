@@ -48,12 +48,11 @@ public class RestaurantsLoader extends AsyncTaskLoader<List<Restaurant>> {
 
 		String url = String
 				.format(Locale.getDefault(),
-						"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=%f,%f&radius=%d&types=food&sensor=false&key=%s",
+						"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=%f,%f&radius=%d&types=bus_station&sensor=false&key=%s",
 						mLatitude, mLongitude, SEARCH_RADIUS_METERS,
 						PLACES_API_KEY);
 
 		HttpGet httpGet = new HttpGet(url);
-		// httpGet.addHeader("Content-type","application/json");
 		ResponseHandler<String> responseHandler = new BasicResponseHandler();
 		String response = null;
 		try {
@@ -64,9 +63,11 @@ public class RestaurantsLoader extends AsyncTaskLoader<List<Restaurant>> {
 
 		// Create a JSONObject from the body of the response
 		JSONObject responseJson = null;
-		try {
-			responseJson = new JSONObject(response);
-		} catch (JSONException e1) {
+		if (response != null) {
+			try {
+				responseJson = new JSONObject(response);
+			} catch (JSONException e1) {
+			}
 		}
 
 		SharedPreferences sharedPreferences = getContext()

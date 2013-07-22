@@ -6,6 +6,7 @@ import android.app.ActionBar;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.IntentSender;
+import android.content.res.Configuration;
 import android.location.Location;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
@@ -14,6 +15,7 @@ import android.support.v4.app.LoaderManager.LoaderCallbacks;
 import android.support.v4.content.Loader;
 import android.util.DisplayMetrics;
 import android.view.Menu;
+import android.view.MenuItem;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient;
@@ -24,6 +26,7 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.yoelglus.restaurants.R.id;
 
 public class MainActivity extends FragmentActivity implements ActionBar.TabListener, 
 																GooglePlayServicesClient.ConnectionCallbacks,
@@ -251,5 +254,24 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 	    return zoomLevel;
 	}
 	
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		if (item.getItemId() == id.action_refresh) {
+			Bundle args = new Bundle();
+			mLocation = mLocationClient.getLastLocation();
+			if (mLocation != null) {
+				args.putDouble("Lat", mLocation.getLatitude());
+				args.putDouble("Lng", mLocation.getLongitude());
+			}
+			getSupportLoaderManager().restartLoader(0, args, this);
+			return true;
+		}
+		return super.onOptionsItemSelected(item);
+	}
+	
+	@Override
+	public void onConfigurationChanged(Configuration newConfig) {
+	  super.onConfigurationChanged(newConfig);
+	}
 
 }
