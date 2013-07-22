@@ -1,8 +1,18 @@
 package com.yoelglus.restaurants;
 
+/**
+ * A class representing a restaurant location.
+ * @author Yoel Gluschnaider
+ *
+ */
 public class Restaurant {
+	// The restaurant name
 	private String mName;
+	
+	// The restaurant address (called vicinity in places)
 	private String mVicinity;
+	
+	// The location of the restaurant.
 	private double mLatitude;
 	private double mLongitude;
 	

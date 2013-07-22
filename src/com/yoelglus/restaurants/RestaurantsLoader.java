@@ -23,13 +23,46 @@ import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.support.v4.content.AsyncTaskLoader;
 
+/**
+ * Loads the restaurants list from the places API in a background thread.
+ * Use the shared preferences as the persistant memory for the offline mode.
+ * @author Yoel Gluschnaider
+ *
+ */
 public class RestaurantsLoader extends AsyncTaskLoader<List<Restaurant>> {
 
+	// The status value of a valid response from the places API.
+	private static final String STATUS_OK = "OK";
+
+	// name of the restaurants list shared preferences.
+	private static final String SHARED_PREF_NAME = "restaurants";
+
+	// The response from places API key in the shared preferences
+	private static final String RESPONSE_SP_KEY = "response";
+
+	// The key of the places API key meta data element.
+	private static final String META_DATA_KEY = "com.yoelglus.restaurants.places.API_KEY";	
+	
+	// The search radius in meters (one mile).
+	private static final int SEARCH_RADIUS_METERS = 1609;
+
+	// The current location (used to set the location in the request from the places API).
 	private double mLatitude;
 	private double mLongitude;
 
+	// Read the API key from the app's manifest.
 	private String mApiKey;
 	
+	// JSON response from Google Places properties keys
+	private static final String STATUS_KEY = "status";
+	private static final String RESTAURANTS_LIST_KEY = "results";
+	private static final String LONGITUDE_KEY = "lng";
+	private static final String LATITUDE_KEY = "lat";
+	private static final String LOCATION_KEY = "location";
+	private static final String GEOMETRY_KEY = "geometry";
+	private static final String VICINITY_KEY = "vicinity";
+	private static final String NAME_KEY = "name";
+
 	public RestaurantsLoader(Context context, double lat, double lng) {
 		super(context);
 		mLatitude = lat;
@@ -37,15 +70,13 @@ public class RestaurantsLoader extends AsyncTaskLoader<List<Restaurant>> {
 		// extract the API key from the app's meta data.
 		ApplicationInfo appInfo;
 		try {
-			appInfo = context.getPackageManager().getApplicationInfo(context.getPackageName(), PackageManager.GET_META_DATA);
-			mApiKey = appInfo.metaData.getString("com.yoelglus.restaurants.places.API_KEY");
+			appInfo = context.getPackageManager().getApplicationInfo(
+					context.getPackageName(), PackageManager.GET_META_DATA);
+			mApiKey = appInfo.metaData.getString(META_DATA_KEY);
 		} catch (NameNotFoundException e) {
 			// do nothing.
 		}
 	}
-
-	// The search radius in meters (one mile).
-	private static final int SEARCH_RADIUS_METERS = 1609;
 
 	@Override
 	public List<Restaurant> loadInBackground() {
@@ -56,6 +87,7 @@ public class RestaurantsLoader extends AsyncTaskLoader<List<Restaurant>> {
 		// get the list from the places API
 		HttpClient httpClient = new DefaultHttpClient();
 
+		// Build the URL for the request from the places API.
 		String url = String
 				.format(Locale.getDefault(),
 						"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=%f,%f&radius=%d&types=restaurant&sensor=false&key=%s",
@@ -64,6 +96,7 @@ public class RestaurantsLoader extends AsyncTaskLoader<List<Restaurant>> {
 						SEARCH_RADIUS_METERS,
 						mApiKey);
 
+		// Request the data from the places API.
 		HttpGet httpGet = new HttpGet(url);
 		ResponseHandler<String> responseHandler = new BasicResponseHandler();
 		String response = null;
@@ -83,19 +116,19 @@ public class RestaurantsLoader extends AsyncTaskLoader<List<Restaurant>> {
 		}
 
 		SharedPreferences sharedPreferences = getContext()
-				.getSharedPreferences("restaurants", Context.MODE_PRIVATE);
+				.getSharedPreferences(SHARED_PREF_NAME, Context.MODE_PRIVATE);
 
 		// Validate the result
 		if (responseJson != null
-				&& "OK".equals(responseJson.optString("status"))) {
+				&& STATUS_OK.equals(responseJson.optString(STATUS_KEY))) {
 			// if succeeded, save the data to the shared preferences.
 			Editor editor = sharedPreferences.edit();
-			editor.putString("response", response);
+			editor.putString(RESPONSE_SP_KEY, response);
 			editor.commit();
 		}
 		// if failed, try to get the latest data from the share preferences.
 		else {
-			response = sharedPreferences.getString("response", null);
+			response = sharedPreferences.getString(RESPONSE_SP_KEY, null);
 			if (response != null) {
 				try {
 					responseJson = new JSONObject(response);
@@ -103,11 +136,19 @@ public class RestaurantsLoader extends AsyncTaskLoader<List<Restaurant>> {
 				}
 			}
 		}
+		
+		// parse the list.
 		resturantsList = parseResponse(responseJson);
 
 		return resturantsList;
 	}
 
+	/**
+	 * Parses the JSON response from Google Places and returns the restaurants list
+	 * Returns null if list is invalid
+	 * @param responseJson - the JSON from the google places API.
+	 * @return the restaurants list or null if the list is invalid. 
+	 */
 	private List<Restaurant> parseResponse(JSONObject responseJson) {
 		if (responseJson == null) {
 			return null;
@@ -115,29 +156,29 @@ public class RestaurantsLoader extends AsyncTaskLoader<List<Restaurant>> {
 		List<Restaurant> resturantsList;
 		// Parse the list
 		resturantsList = new ArrayList<Restaurant>();
-		JSONArray results = responseJson.optJSONArray("results");
+		// Get the JSON list as an array.
+		JSONArray results = responseJson.optJSONArray(RESTAURANTS_LIST_KEY);
 		int resultsLen = results.length();
 		JSONObject result = null;
 		for (int i = 0; i < resultsLen; i++) {
 			result = results.optJSONObject(i);
 			if (result != null) {
-				String name = result.optString("name");
-				String vicinity = result.optString("vicinity");
+				String name = result.optString(NAME_KEY);
+				String vicinity = result.optString(VICINITY_KEY);
 				double latitude = 0;
 				double longitude = 0;
 
 				// parse the location
-				JSONObject geometry = result.optJSONObject("geometry");
+				JSONObject geometry = result.optJSONObject(GEOMETRY_KEY);
 				if (geometry != null) {
-					JSONObject location = geometry.optJSONObject("location");
+					JSONObject location = geometry.optJSONObject(LOCATION_KEY);
 					if (location != null) {
-						latitude = location.optDouble("lat", 0);
-						longitude = location.optDouble("lng", 0);
+						latitude = location.optDouble(LATITUDE_KEY, 0);
+						longitude = location.optDouble(LONGITUDE_KEY, 0);
 					}
 				}
 				// add the restaurant to the list.
-				resturantsList.add(new Restaurant(name, vicinity, latitude,
-						longitude));
+				resturantsList.add(new Restaurant(name, vicinity, latitude, longitude));
 			}
 		}
 		return resturantsList;

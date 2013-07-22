@@ -6,7 +6,6 @@ import android.app.ActionBar;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.IntentSender;
-import android.content.res.Configuration;
 import android.location.Location;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
@@ -30,108 +29,138 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.yoelglus.restaurants.R.id;
 
-public class MainActivity extends FragmentActivity implements ActionBar.TabListener, 
-																GooglePlayServicesClient.ConnectionCallbacks,
-																GooglePlayServicesClient.OnConnectionFailedListener,
-																LoaderCallbacks<List<Restaurant>>, 
-																LocationListener {
-	
+/**
+ * The main activity of the app. Contains two tabs with two fragments:
+ * ListFragment and MapsFragment. There is no ViewPager in this case since
+ * panning the map might cause unwanted swiping between screens.
+ * 
+ * @author Yoel Gluschnaider
+ * 
+ */
+public class MainActivity extends FragmentActivity implements
+		ActionBar.TabListener, GooglePlayServicesClient.ConnectionCallbacks,
+		GooglePlayServicesClient.OnConnectionFailedListener,
+		LoaderCallbacks<List<Restaurant>>, LocationListener {
+
+	// Loader initialization arguments (the current location of the device).
+	private static final String LOADER_ARG_LONGITUDE = "Lng";
+	private static final String LOADER_ARG_LATITUDE = "Lat";
+
+	// Location request parameters
+	private static final int INTERVAL_CEILING_MILISEC = 1000;
+	private static final int UPDATE_INTERVAL_MILISEC = 5000;
+
+	// The ID of the request for resolving issues when trying to connect to the
+	// Google Services.
 	private final static int CONNECTION_FAILURE_RESOLUTION_REQUEST = 9000;
-	
+
+	// Location client used to communicate with Google Services.
 	private LocationClient mLocationClient;
-	
+
+	// Pointers to the two screens of the app.
 	private RestaurantsListFragment mListFragment;
 	private SupportMapFragment mMapFragment;
-	
+
+	// position of the two screens
 	private static final int LIST_SCREEN_POSITION = 0;
 	private static final int MAP_SCREEN_POSITION = 1;
-	
-	private int mSelectedTab = 0;
 
+	// The last known location.
 	private Location mLocation;
 
+	// The list of restaurants
 	private List<Restaurant> mRestaurantsList;
-	
-    // A request to connect to Location Services
-    private LocationRequest mLocationRequest;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+	// A request to connect to Location Services
+	private LocationRequest mLocationRequest;
 
-        // Set up the action bar.
-        final ActionBar actionBar = getActionBar();
-        actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_TABS);
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
 
-        // Create a new global location parameters object
-        mLocationRequest = LocationRequest.create();
-        
-        /*
-         * Set the update interval
-         */
-        mLocationRequest.setInterval(5000);
+		// Set up the action bar.
+		final ActionBar actionBar = getActionBar();
+		actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_TABS);
 
-        // Use high accuracy
-        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+		// Create a new global location parameters object
+		mLocationRequest = LocationRequest.create();
 
-        // Set the interval ceiling to one second
-        mLocationRequest.setFastestInterval(1000);
-        
-        actionBar.addTab(
-                actionBar.newTab()
-                        .setText(getString(R.string.title_list_screen))
-                        .setTabListener(this));
-        actionBar.addTab(
-                actionBar.newTab()
-                        .setText(getString(R.string.title_map_screen))
-                        .setTabListener(this));
-        
-        // create the location client to get the device location
-        mLocationClient = new LocationClient(this, this, this);
-    }
+		// Set the update interval
+		mLocationRequest.setInterval(UPDATE_INTERVAL_MILISEC);
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.main, menu);
-        return true;
-    }
-    
-    @Override
-    public void onTabSelected(ActionBar.Tab tab, android.app.FragmentTransaction fragmentTransaction) {
-    	FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
-    	mSelectedTab = tab.getPosition();
-    	switch (mSelectedTab) {
+		// Use high accuracy
+		mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+
+		// Set the interval ceiling to one second
+		mLocationRequest.setFastestInterval(INTERVAL_CEILING_MILISEC);
+
+		// add the tabs
+		actionBar.addTab(actionBar.newTab()
+				.setText(getString(R.string.title_list_screen))
+				.setTabListener(this));
+		actionBar.addTab(actionBar.newTab()
+				.setText(getString(R.string.title_map_screen))
+				.setTabListener(this));
+
+		// create the location client to get the device location
+		mLocationClient = new LocationClient(this, this, this);
+	}
+
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		// Inflate the menu; this adds items to the action bar if it is present.
+		getMenuInflater().inflate(R.menu.main, menu);
+		return true;
+	}
+
+	@Override
+	public void onTabSelected(ActionBar.Tab tab,
+			android.app.FragmentTransaction fragmentTransaction) {
+		FragmentTransaction transaction = getSupportFragmentManager()
+				.beginTransaction();
+		switch (tab.getPosition()) {
 		case LIST_SCREEN_POSITION:
+			// if the list fragment was not created, create it.
+			// Otherwise attach it back.
 			if (mListFragment == null) {
 				mListFragment = new RestaurantsListFragment();
-				transaction.add(android.R.id.content, mListFragment, "ListFragment");
-			}
-			else {
+				transaction.add(android.R.id.content, mListFragment,
+						"ListFragment");
+			} else {
 				transaction.attach(mListFragment);
 			}
 			break;
 		case MAP_SCREEN_POSITION:
+			// if the maps fragment was not created, create it.
+			// Otherwise attach it back.
 			if (mMapFragment == null) {
 				mMapFragment = SupportMapFragment.newInstance();
-				transaction.add(android.R.id.content, mMapFragment, "MapFragment");
+				transaction.add(android.R.id.content, mMapFragment,
+						"MapFragment");
 				transaction.commit();
+				// Do the transaction immediately so that we can add markers.
+				// This is to avoid null map object retreived from the map
+				// fragment.
 				getSupportFragmentManager().executePendingTransactions();
+				// Set the map markers, position and zoom level.
 				setMapData();
+				// Return to avoid double commit of the transaction.
 				return;
-			}
-			else {
+			} else {
 				transaction.attach(mMapFragment);
 			}
 			break;
-    	}
-    	transaction.commit();
-    }
+		}
+		transaction.commit();
+	}
 
 	@Override
-    public void onTabUnselected(ActionBar.Tab tab, android.app.FragmentTransaction fragmentTransaction) {
-		FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
-    	switch (tab.getPosition()) {
+	public void onTabUnselected(ActionBar.Tab tab,
+			android.app.FragmentTransaction fragmentTransaction) {
+		// Detach the unselected tab. Use the support fragment manager.
+		FragmentTransaction transaction = getSupportFragmentManager()
+				.beginTransaction();
+		switch (tab.getPosition()) {
 		case LIST_SCREEN_POSITION:
 			if (mListFragment != null) {
 				transaction.detach(mListFragment);
@@ -142,108 +171,97 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 				transaction.detach(mMapFragment);
 			}
 			break;
-    	}
-    	transaction.commit();
-    }
+		}
+		transaction.commit();
+	}
 
-    @Override
-    public void onTabReselected(ActionBar.Tab tab, android.app.FragmentTransaction fragmentTransaction) {
-    }
-    
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-    	switch (requestCode) {
+	@Override
+	public void onTabReselected(ActionBar.Tab tab,
+			android.app.FragmentTransaction fragmentTransaction) {
+		// Do nothing.
+	}
+
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		switch (requestCode) {
 		case CONNECTION_FAILURE_RESOLUTION_REQUEST:
+			// If we resolved the connection failure to the Google Services, try
+			// to reconnect.
 			if (resultCode == Activity.RESULT_OK) {
 				mLocationClient.connect();
 			}
 			break;
 
 		default:
-	    	super.onActivityResult(requestCode, resultCode, data);
+			super.onActivityResult(requestCode, resultCode, data);
 			break;
 		}
-    }
-    
-    @Override
-    protected void onStart() {
-    	super.onStart();
-    	mLocationClient.connect();
-    }
-    
-    /**
-     * In response to a request to start updates, send a request
-     * to Location Services
-     */
-    private void startPeriodicUpdates() {
-        mLocationClient.requestLocationUpdates(mLocationRequest, this);
-    }
-    
-    @Override
-    protected void onStop() {
-        // If the client is connected
-        if (mLocationClient.isConnected()) {
-            stopPeriodicUpdates();
-        }
-    	mLocationClient.disconnect();
-    	super.onStop();
-    }
-    
-    /**
-     * In response to a request to stop updates, send a request to
-     * Location Services
-     */
-    private void stopPeriodicUpdates() {
-        mLocationClient.removeLocationUpdates(this);
-    }
+	}
+
+	@Override
+	protected void onStart() {
+		super.onStart();
+		// connect to the Location Services.
+		mLocationClient.connect();
+	}
+
+	@Override
+	protected void onStop() {
+		// If the client is connected, send stop update request to Location
+		// Services
+		if (mLocationClient.isConnected()) {
+			mLocationClient.removeLocationUpdates(this);
+		}
+		// disconnect from the Location Services.
+		mLocationClient.disconnect();
+		super.onStop();
+	}
 
 	@Override
 	public void onConnectionFailed(ConnectionResult result) {
-		/*
-         * Google Play services can resolve some errors it detects.
-         * If the error has a resolution, try sending an Intent to
-         * start a Google Play services activity that can resolve
-         * error.
-         */
-        if (result.hasResolution()) {
-            try {
-                // Start an Activity that tries to resolve the error
-            	result.startResolutionForResult(
-                        this,
-                        CONNECTION_FAILURE_RESOLUTION_REQUEST);
-                /*
-                 * Thrown if Google Play services canceled the original
-                 * PendingIntent
-                 */
-            } catch (IntentSender.SendIntentException e) {
-            	// No connection to google play services. Can't get location.
-            }
-        } else {
-            // No connection to google play services. Can't get location.
-        }
+		// If the Google Play Services can resolve this issue, send an Intent to
+		// show a resolution activity.
+		if (result.hasResolution()) {
+			try {
+				// Start an Activity that tries to resolve the error
+				result.startResolutionForResult(this,
+						CONNECTION_FAILURE_RESOLUTION_REQUEST);
+				// Thrown if Google Play services canceled the original
+				// PendingIntent
+			} catch (IntentSender.SendIntentException e) {
+				// No connection to google play services. Can't get location.
+			}
+		} else {
+			// No connection to google play services. Can't get location.
+		}
 	}
 
 	@Override
 	public void onConnected(Bundle connectionHint) {
-		
-		startPeriodicUpdates();
-		
+
+		// Sends an update request to Location Services
+		mLocationClient.requestLocationUpdates(mLocationRequest, this);
+
 		// get the current location and initialize the loader
 		Bundle args = new Bundle();
 		mLocation = mLocationClient.getLastLocation();
 		if (mLocation != null) {
-			args.putDouble("Lat", mLocation.getLatitude());
-			args.putDouble("Lng", mLocation.getLongitude());
+			args.putDouble(LOADER_ARG_LATITUDE, mLocation.getLatitude());
+			args.putDouble(LOADER_ARG_LONGITUDE, mLocation.getLongitude());
 		}
 		getSupportLoaderManager().initLoader(0, args, this);
 	}
 
 	@Override
-	public void onDisconnected() {}
+	public void onDisconnected() {
+		// Do nothing
+	}
 
 	@Override
 	public Loader<List<Restaurant>> onCreateLoader(int id, Bundle args) {
-		Loader<List<Restaurant>> loader = new RestaurantsLoader(this, args.getDouble("Lat"), args.getDouble("Lng"));
+		Loader<List<Restaurant>> loader = new RestaurantsLoader(this,
+				args.getDouble(LOADER_ARG_LATITUDE), args.getDouble(LOADER_ARG_LONGITUDE));
+		// force the loading.
 		loader.forceLoad();
 		return loader;
 	}
@@ -255,11 +273,11 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 		if (mListFragment != null) {
 			mListFragment.setRestaurantsList(mRestaurantsList);
 		}
-		
+
 		if (mMapFragment != null) {
 			setMapData();
 		}
-		
+
 	}
 
 	private void setMapData() {
@@ -268,60 +286,59 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 			// first clear all current markers
 			map.clear();
 			for (Restaurant restaurant : mRestaurantsList) {
-				map.addMarker(
-						new MarkerOptions()
-							.position(new LatLng(restaurant.getLatitude(), restaurant.getLongitude()))
-							.title(restaurant.getName()).snippet(restaurant.getVicinity()));
+				map.addMarker(new MarkerOptions()
+						.position(
+								new LatLng(restaurant.getLatitude(), restaurant
+										.getLongitude()))
+						.title(restaurant.getName())
+						.snippet(restaurant.getVicinity()));
 			}
-			
+
 			CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(
-					new LatLng(mLocation.getLatitude(), mLocation.getLongitude()), calculateZoomLevel());
+					new LatLng(mLocation.getLatitude(), mLocation
+							.getLongitude()), calculateZoomLevel());
 			map.animateCamera(cameraUpdate);
 		}
 	}
 
 	@Override
-	public void onLoaderReset(Loader<List<Restaurant>> arg0) {
-		
+	public void onLoaderReset(Loader<List<Restaurant>> loader) {
+
 	}
-	
+
 	private int calculateZoomLevel() {
 		DisplayMetrics dispalayMetrics = new DisplayMetrics();
 		getWindowManager().getDefaultDisplay().getMetrics(dispalayMetrics);
-	    double equatorLength = 6378140; // in meters
-	    double widthInPixels = dispalayMetrics.widthPixels;
-	    double metersPerPixel = equatorLength / 256;
-	    int zoomLevel = 1;
-	    while ((metersPerPixel * widthInPixels) > 3200) {
-	        metersPerPixel /= 2;
-	        ++zoomLevel;
-	    }
-	    return zoomLevel;
+		double equatorLength = 6378140; // in meters
+		double widthInPixels = dispalayMetrics.widthPixels;
+		double metersPerPixel = equatorLength / 256;
+		int zoomLevel = 1;
+		while ((metersPerPixel * widthInPixels) > 3200) {
+			metersPerPixel /= 2;
+			++zoomLevel;
+		}
+		return zoomLevel;
 	}
-	
+
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
 		if (item.getItemId() == id.action_refresh) {
+			// aquire the new location and restart the loader to get the data from the Google Places API.
 			Bundle args = new Bundle();
 			mLocation = mLocationClient.getLastLocation();
 			if (mLocation != null) {
-				args.putDouble("Lat", mLocation.getLatitude());
-				args.putDouble("Lng", mLocation.getLongitude());
+				args.putDouble(LOADER_ARG_LATITUDE, mLocation.getLatitude());
+				args.putDouble(LOADER_ARG_LONGITUDE, mLocation.getLongitude());
 			}
 			getSupportLoaderManager().restartLoader(0, args, this);
 			return true;
 		}
 		return super.onOptionsItemSelected(item);
 	}
-	
-	@Override
-	public void onConfigurationChanged(Configuration newConfig) {
-	  super.onConfigurationChanged(newConfig);
-	}
 
 	@Override
 	public void onLocationChanged(Location location) {
-		// do nothing.
+		// do nothing, we get the location in each refresh operation.
 	}
 
 }
