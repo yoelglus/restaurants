@@ -5,4 +5,5 @@
 	<string name="action_refresh">Refresh</string>
 	<string name="title_list_screen">List</string>
 	<string name="title_map_screen">Map</string>
+	<string name="empty_list">No Restaurants</string>
 </resources>
