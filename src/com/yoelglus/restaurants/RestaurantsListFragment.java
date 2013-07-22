@@ -55,7 +55,7 @@ public class RestaurantsListFragment extends ListFragment {
 				viewHolder = new RestaurantViewHolder();
 				viewHolder.text1 = (TextView) convertView.findViewById(android.R.id.text1);
 				viewHolder.text2 = (TextView) convertView.findViewById(android.R.id.text2);
-				convertView.setTag(id.action_refresh, viewHolder);
+				convertView.setTag(viewHolder);
 			}
 			// reuse existing view.
 			else {
