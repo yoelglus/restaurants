@@ -43,13 +43,6 @@ public class RestaurantsLoader extends AsyncTaskLoader<List<Restaurant>> {
 	// The key of the places API key meta data element.
 	private static final String META_DATA_KEY = "com.yoelglus.restaurants.places.API_KEY";	
 	
-	// The current location (used to set the location in the request from the places API).
-	private double mLatitude;
-	private double mLongitude;
-
-	// Read the API key from the app's manifest.
-	private String mApiKey;
-	
 	// JSON response from Google Places properties keys
 	private static final String STATUS_KEY = "status";
 	private static final String RESTAURANTS_LIST_KEY = "results";
@@ -59,6 +52,17 @@ public class RestaurantsLoader extends AsyncTaskLoader<List<Restaurant>> {
 	private static final String GEOMETRY_KEY = "geometry";
 	private static final String VICINITY_KEY = "vicinity";
 	private static final String NAME_KEY = "name";
+	
+	// the type of places you want to use
+	private static final String PLACES_TYPE = "restaurant";
+	
+	// The current location (used to set the location in the request from the places API).
+	private double mLatitude;
+	private double mLongitude;
+
+	// Read the API key from the app's manifest.
+	private String mApiKey;
+
 
 	public RestaurantsLoader(Context context, double lat, double lng) {
 		super(context);
@@ -87,10 +91,11 @@ public class RestaurantsLoader extends AsyncTaskLoader<List<Restaurant>> {
 		// Build the URL for the request from the places API.
 		String url = String
 				.format(Locale.getDefault(),
-						"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=%f,%f&radius=%d&types=restaurant&sensor=false&key=%s",
+						"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=%f,%f&radius=%d&types=%s&sensor=false&key=%s",
 						mLatitude, 
 						mLongitude, 
 						Constants.SEARCH_RADIUS_METERS,
+						PLACES_TYPE,
 						mApiKey);
 
 		// Request the data from the places API.
