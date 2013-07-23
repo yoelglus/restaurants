@@ -306,14 +306,20 @@ public class MainActivity extends FragmentActivity implements
 
 	}
 
+	/**
+	 * Calculate the zoom level according to the required width of the screen (2 miles).
+	 * @return The zoom level to show the map.
+	 */
 	private int calculateZoomLevel() {
 		DisplayMetrics dispalayMetrics = new DisplayMetrics();
 		getWindowManager().getDefaultDisplay().getMetrics(dispalayMetrics);
 		double equatorLength = 6378140; // in meters
-		double widthInPixels = dispalayMetrics.widthPixels;
+		// get the shorter size (in landscape it is the height).
+		double widthInPixels = Math.min(dispalayMetrics.widthPixels, dispalayMetrics.heightPixels);
 		double metersPerPixel = equatorLength / 256;
 		int zoomLevel = 1;
-		while ((metersPerPixel * widthInPixels) > 3200) {
+		int targetWidthInMeters = 2 * Constants.SEARCH_RADIUS_METERS;
+		while ((metersPerPixel * widthInPixels) > targetWidthInMeters) {
 			metersPerPixel /= 2;
 			++zoomLevel;
 		}

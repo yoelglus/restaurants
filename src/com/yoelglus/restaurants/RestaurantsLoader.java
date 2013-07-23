@@ -43,9 +43,6 @@ public class RestaurantsLoader extends AsyncTaskLoader<List<Restaurant>> {
 	// The key of the places API key meta data element.
 	private static final String META_DATA_KEY = "com.yoelglus.restaurants.places.API_KEY";	
 	
-	// The search radius in meters (one mile).
-	private static final int SEARCH_RADIUS_METERS = 1609;
-
 	// The current location (used to set the location in the request from the places API).
 	private double mLatitude;
 	private double mLongitude;
@@ -93,7 +90,7 @@ public class RestaurantsLoader extends AsyncTaskLoader<List<Restaurant>> {
 						"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=%f,%f&radius=%d&types=restaurant&sensor=false&key=%s",
 						mLatitude, 
 						mLongitude, 
-						SEARCH_RADIUS_METERS,
+						Constants.SEARCH_RADIUS_METERS,
 						mApiKey);
 
 		// Request the data from the places API.

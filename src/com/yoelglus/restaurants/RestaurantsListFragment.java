@@ -11,7 +11,6 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
-import com.yoelglus.restaurants.R.id;
 import com.yoelglus.restaurants.R.layout;
 
 /**
@@ -59,7 +58,7 @@ public class RestaurantsListFragment extends ListFragment {
 			}
 			// reuse existing view.
 			else {
-				viewHolder = (RestaurantViewHolder) convertView.getTag(id.action_refresh);
+				viewHolder = (RestaurantViewHolder) convertView.getTag();
 			}
 			
 			// set the name and vicinity.
