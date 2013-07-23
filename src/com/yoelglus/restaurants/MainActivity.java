@@ -25,9 +25,12 @@ import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.yoelglus.restaurants.R.id;
+import com.yoelglus.restaurants.R.layout;
+import com.yoelglus.restaurants.R.string;
 
 /**
  * The main activity of the app. Contains two tabs with two fragments:
@@ -73,6 +76,8 @@ public class MainActivity extends FragmentActivity implements
 
 	// A request to connect to Location Services
 	private LocationRequest mLocationRequest;
+	
+	private MenuItem mRefreshMenuItem;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -110,6 +115,7 @@ public class MainActivity extends FragmentActivity implements
 	public boolean onCreateOptionsMenu(Menu menu) {
 		// Inflate the menu; this adds items to the action bar if it is present.
 		getMenuInflater().inflate(R.menu.main, menu);
+		mRefreshMenuItem = menu.findItem(id.action_refresh);
 		return true;
 	}
 
@@ -270,6 +276,8 @@ public class MainActivity extends FragmentActivity implements
 	public void onLoadFinished(Loader<List<Restaurant>> loader,
 			List<Restaurant> data) {
 		mRestaurantsList = data;
+		// remove the loading indicator
+		mRefreshMenuItem.setActionView(null);
 		if (mListFragment != null) {
 			mListFragment.setRestaurantsList(mRestaurantsList);
 		}
@@ -293,10 +301,17 @@ public class MainActivity extends FragmentActivity implements
 						.title(restaurant.getName())
 						.snippet(restaurant.getVicinity()));
 			}
+			
+			LatLng curLocation = new LatLng(mLocation.getLatitude(), mLocation.getLongitude());
+			
+			// add the current location marker
+			map.addMarker(new MarkerOptions()
+						.position(curLocation)
+						.title(getString(string.my_location_marker_title))
+						.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)));
 
 			CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(
-					new LatLng(mLocation.getLatitude(), mLocation
-							.getLongitude()), calculateZoomLevel());
+					curLocation, calculateZoomLevel());
 			map.animateCamera(cameraUpdate);
 		}
 	}
@@ -336,6 +351,8 @@ public class MainActivity extends FragmentActivity implements
 				args.putDouble(LOADER_ARG_LATITUDE, mLocation.getLatitude());
 				args.putDouble(LOADER_ARG_LONGITUDE, mLocation.getLongitude());
 			}
+			// show loading indicator
+			mRefreshMenuItem.setActionView(layout.loading_indicator);
 			getSupportLoaderManager().restartLoader(0, args, this);
 			return true;
 		}

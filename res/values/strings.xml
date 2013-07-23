@@ -6,4 +6,5 @@
 	<string name="title_list_screen">List</string>
 	<string name="title_map_screen">Map</string>
 	<string name="empty_list">No Restaurants</string>
+	<string name="my_location_marker_title">You are here!</string>
 </resources>
